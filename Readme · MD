@@ -1,0 +1,149 @@
+# 🌦️ WeatherMcpServer
+
+A local [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on .NET 9,
+that gives any MCP-compatible AI client (Claude Desktop, VS Code + Copilot Chat, Claude Code, etc.)
+a real-time weather tool — current conditions and a daily forecast for **any place in the world**,
+by name.
+
+Powered by [Open-Meteo](https://open-meteo.com/) — free, global coverage, no API key required.
+
+```
+"What's the weather in Hyderabad?"
+   → get_forecast("Hyderabad")
+   → Forecast for Hyderabad, India:
+     Current temperature: 28.1°C
+     2026-08-18: High 30.1°C, Low 24.3°C, Rain chance 40%
+     ...
+```
+
+## ✨ Features
+
+- 🌍 **Global coverage** — resolves any city/place name via Open-Meteo's geocoding API, not just US locations
+- 🔌 **Zero config** — no API keys, no secrets, works out of the box
+- 📡 **Standard MCP over stdio** — drop-in compatible with any MCP host
+- 🧱 **Minimal footprint** — one tool, ~100 lines of code, easy to read and extend
+
+## 🛠️ Tech Stack
+
+- [.NET 9](https://dotnet.microsoft.com/)
+- [ModelContextProtocol](https://www.nuget.org/packages/ModelContextProtocol) — official C# MCP SDK
+- [Open-Meteo](https://open-meteo.com/) forecast + geocoding APIs
+
+## 📦 Project Structure
+
+```
+WeatherMcpServer/
+├── WeatherMcpServer.csproj
+├── Program.cs                 # host setup, stdio transport, HttpClient DI
+├── HttpClientExtensions.cs    # JSON GET helper
+└── WeatherTools.cs            # get_forecast tool (geocoding + forecast)
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- Internet access (calls Open-Meteo's public APIs)
+
+### Install
+
+```bash
+git clone https://github.com/<your-username>/WeatherMcpServer.git
+cd WeatherMcpServer
+dotnet restore
+dotnet build
+```
+
+### Run
+
+```bash
+dotnet run
+```
+
+The process will sit silently, waiting for JSON-RPC messages on stdin — that's expected for a
+stdio-based MCP server, it's not meant to be run standalone in a terminal.
+
+### Try it without a full MCP client
+
+```bash
+npx @modelcontextprotocol/inspector dotnet run
+```
+
+Opens a browser UI to call `get_forecast` directly and inspect the response.
+
+## 🔗 Connect to a Client
+
+<details>
+<summary><strong>VS Code (GitHub Copilot Chat)</strong></summary>
+
+Create `.vscode/mcp.json` in the repo root:
+
+```json
+{
+  "servers": {
+    "weather": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": ["run", "--project", "${workspaceFolder}", "--no-build"]
+    }
+  }
+}
+```
+
+Build once, then open Chat → switch to **Agent** mode → confirm the trust prompt.
+
+</details>
+
+<details>
+<summary><strong>Claude Desktop</strong></summary>
+
+Edit `claude_desktop_config.json`:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%AppData%\Claude\claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "weather": {
+      "command": "dotnet",
+      "args": ["run", "--project", "/absolute/path/to/WeatherMcpServer", "--no-build"]
+    }
+  }
+}
+```
+
+Fully quit and restart Claude Desktop afterward.
+
+</details>
+
+## 🧰 API Reference
+
+| Tool | Description | Parameters |
+|---|---|---|
+| `get_forecast` | Current temperature + daily high/low/rain-chance forecast | `location` *(string, required)* — city/place name, e.g. `"Hyderabad"` |
+
+## 🐞 Troubleshooting
+
+- **Never write to stdout** in this process — it corrupts the JSON-RPC stream. `Program.cs` uses
+  `Host.CreateEmptyApplicationBuilder` to prevent any default console output; route any added
+  logging to stderr or a file instead.
+- **"Couldn't find a location matching ..."** — Open-Meteo's geocoding found no match; try a more
+  specific query like `"City, Country"`.
+- **VS Code:** Command Palette → `MCP: List Servers` → select `weather` → `Show Output`.
+- **Claude Desktop logs:** `~/Library/Logs/Claude/mcp-server-weather.log` (macOS) or
+  `%AppData%\Claude\logs\` (Windows).
+
+## 🤝 Contributing
+
+Issues and PRs welcome. Ideas for extending this:
+- Weather alerts (India doesn't have a clean free equivalent to the US NWS alerts API — worth
+  investigating IMD or a paid provider)
+- Air quality index tool (Open-Meteo has an air-quality endpoint too)
+- Multi-day hourly breakdown instead of daily summaries
+
+## 📄 License
+
+[MIT](LICENSE) — free to use, modify, and distribute.
