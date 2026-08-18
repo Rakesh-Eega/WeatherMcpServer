@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "weather": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": ["run", "--project", "${workspaceFolder}", "--no-build"]
+    }
+  }
+}
